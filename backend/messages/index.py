@@ -43,7 +43,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             image_url = body_data.get('image_url')
             
             cur.execute(
-                """INSERT INTO messages (sender_id, receiver_id, text, file_url, audio_url, image_url) 
+                """INSERT INTO t_p97947919_social_connect_platf.messages (sender_id, receiver_id, text, file_url, audio_url, image_url) 
                    VALUES (%s, %s, %s, %s, %s, %s) 
                    RETURNING id, sender_id, receiver_id, text, file_url, audio_url, image_url, read, created_at""",
                 (sender_id, receiver_id, text, file_url, audio_url, image_url)
@@ -66,8 +66,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             cur.execute(
                 """SELECT m.id, m.sender_id, m.receiver_id, m.text, m.file_url, m.audio_url, m.image_url, 
                    m.read, m.created_at, u.nickname, u.avatar_url
-                   FROM messages m
-                   JOIN users u ON m.sender_id = u.id
+                   FROM t_p97947919_social_connect_platf.messages m
+                   JOIN t_p97947919_social_connect_platf.users u ON m.sender_id = u.id
                    WHERE (m.sender_id = %s AND m.receiver_id = %s) OR (m.sender_id = %s AND m.receiver_id = %s)
                    ORDER BY m.created_at ASC""",
                 (user_id, chat_with, chat_with, user_id)

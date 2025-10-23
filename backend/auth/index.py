@@ -60,7 +60,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             password_hash = hash_password(password)
             
             cur.execute(
-                "INSERT INTO users (user_id, username, nickname, email, password_hash, avatar_url) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id, user_id, username, nickname, email, avatar_url, verified, online",
+                "INSERT INTO t_p97947919_social_connect_platf.users (user_id, username, nickname, email, password_hash, avatar_url) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id, user_id, username, nickname, email, avatar_url, verified, online",
                 (user_id, username, nickname, email, password_hash, avatar_url)
             )
             user = dict(cur.fetchone())
@@ -79,14 +79,14 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             password_hash = hash_password(password)
             
             cur.execute(
-                "SELECT id, user_id, username, nickname, email, avatar_url, verified, online FROM users WHERE email = %s AND password_hash = %s",
+                "SELECT id, user_id, username, nickname, email, avatar_url, verified, online FROM t_p97947919_social_connect_platf.users WHERE email = %s AND password_hash = %s",
                 (email, password_hash)
             )
             user = cur.fetchone()
             
             if user:
                 user = dict(user)
-                cur.execute("UPDATE users SET online = TRUE WHERE id = %s", (user['id'],))
+                cur.execute("UPDATE t_p97947919_social_connect_platf.users SET online = TRUE WHERE id = %s", (user['id'],))
                 conn.commit()
                 user['online'] = True
                 

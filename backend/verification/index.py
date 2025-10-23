@@ -44,7 +44,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             reason = body_data.get('reason')
             
             cur.execute(
-                "INSERT INTO verification_requests (user_id, selfie_url, contact_email, contact_phone, social_links, description, reason) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id, status, created_at",
+                "INSERT INTO t_p97947919_social_connect_platf.verification_requests (user_id, selfie_url, contact_email, contact_phone, social_links, description, reason) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id, status, created_at",
                 (user_id, selfie_url, contact_email, contact_phone, social_links, description, reason)
             )
             request = dict(cur.fetchone())
@@ -65,8 +65,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 """SELECT vr.id, vr.user_id, vr.selfie_url, vr.contact_email, vr.contact_phone, 
                    vr.social_links, vr.description, vr.reason, vr.status, vr.admin_comment, 
                    vr.created_at, vr.reviewed_at, u.username, u.nickname, u.avatar_url
-                   FROM verification_requests vr
-                   JOIN users u ON vr.user_id = u.id
+                   FROM t_p97947919_social_connect_platf.verification_requests vr
+                   JOIN t_p97947919_social_connect_platf.users u ON vr.user_id = u.id
                    WHERE vr.status = %s
                    ORDER BY vr.created_at DESC""",
                 (status,)
@@ -87,14 +87,14 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             admin_comment = body_data.get('admin_comment', '')
             
             cur.execute(
-                "UPDATE verification_requests SET status = %s, admin_comment = %s, reviewed_at = CURRENT_TIMESTAMP WHERE id = %s RETURNING user_id",
+                "UPDATE t_p97947919_social_connect_platf.verification_requests SET status = %s, admin_comment = %s, reviewed_at = CURRENT_TIMESTAMP WHERE id = %s RETURNING user_id",
                 (status, admin_comment, request_id)
             )
             result = cur.fetchone()
             
             if result and status == 'approved':
                 user_id = result['user_id']
-                cur.execute("UPDATE users SET verified = TRUE WHERE id = %s", (user_id,))
+                cur.execute("UPDATE t_p97947919_social_connect_platf.users SET verified = TRUE WHERE id = %s", (user_id,))
             
             conn.commit()
             
