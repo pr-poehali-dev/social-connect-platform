@@ -1,0 +1,17 @@
+{
+  "tests": [
+    {
+      "name": "Get pending verification requests",
+      "method": "GET",
+      "path": "/",
+      "queryStringParameters": {
+        "status": "pending"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "requests": []
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
