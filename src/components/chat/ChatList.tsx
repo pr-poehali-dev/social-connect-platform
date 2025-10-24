@@ -14,10 +14,12 @@ interface Chat {
   last_message_time?: string;
   unread_count: number;
   user_id_string: string;
+  is_online?: boolean;
+  last_online?: string;
 }
 
 interface ChatListProps {
-  onChatSelect: (chat: { id: number; nickname: string; user_id: string; avatar_url?: string }) => void;
+  onChatSelect: (chat: { id: number; nickname: string; user_id: string; avatar_url?: string; is_online?: boolean; last_online?: string }) => void;
   selectedChatId?: number;
 }
 
@@ -80,6 +82,8 @@ export default function ChatList({ onChatSelect, selectedChatId }: ChatListProps
                   nickname: chat.nickname,
                   user_id: chat.user_id_string,
                   avatar_url: chat.avatar_url,
+                  is_online: chat.is_online,
+                  last_online: chat.last_online,
                 })
               }
               className={`w-full p-3 rounded-lg hover:bg-accent transition-colors text-left ${
@@ -87,10 +91,15 @@ export default function ChatList({ onChatSelect, selectedChatId }: ChatListProps
               }`}
             >
               <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={chat.avatar_url} />
-                  <AvatarFallback>{chat.nickname[0].toUpperCase()}</AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar>
+                    <AvatarImage src={chat.avatar_url} />
+                    <AvatarFallback>{chat.nickname[0].toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  {chat.is_online && (
+                    <div className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 border-2 border-background rounded-full" />
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-semibold truncate">{chat.nickname}</p>

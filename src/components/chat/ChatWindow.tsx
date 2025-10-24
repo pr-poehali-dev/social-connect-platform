@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import VoiceRecorder from './VoiceRecorder';
 import Icon from '@/components/ui/icon';
 
 interface Message {
@@ -25,12 +27,18 @@ interface ChatUser {
   nickname: string;
   user_id: string;
   avatar_url?: string;
+  is_online?: boolean;
+  last_online?: string;
 }
 
 export default function ChatWindow({ chatUser }: { chatUser: ChatUser }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [userStatus, setUserStatus] = useState<{ is_online: boolean; last_online?: string }>({
+    is_online: chatUser.is_online || false,
+    last_online: chatUser.last_online,
+  });
   const { user } = useAuth();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -42,6 +50,10 @@ export default function ChatWindow({ chatUser }: { chatUser: ChatUser }) {
       );
       const data = await response.json();
       setMessages(data.messages);
+      
+      if (data.user_status) {
+        setUserStatus(data.user_status);
+      }
     } catch (error) {
       toast({
         title: 'Ошибка',
@@ -90,10 +102,44 @@ export default function ChatWindow({ chatUser }: { chatUser: ChatUser }) {
     }
   };
 
-  const handleFileUpload = async (type: 'image' | 'file' | 'audio') => {
+  const handleVoiceRecord = async (audioBlob: Blob) => {
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const audioUrl = event.target?.result as string;
+      
+      try {
+        await fetch('https://functions.poehali.dev/4db8cfd7-ba0d-41f9-bc91-0c715944684a', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sender_id: user?.id,
+            receiver_id: chatUser.id,
+            audio_url: audioUrl,
+            text: '🎤 Голосовое сообщение',
+          }),
+        });
+        
+        await loadMessages();
+        toast({
+          title: 'Отправлено',
+          description: 'Голосовое сообщение успешно отправлено',
+        });
+      } catch (error) {
+        toast({
+          title: 'Ошибка',
+          description: 'Не удалось отправить голосовое сообщение',
+          variant: 'destructive',
+        });
+      }
+    };
+    
+    reader.readAsDataURL(audioBlob);
+  };
+
+  const handleFileUpload = async (type: 'image' | 'file') => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = type === 'image' ? 'image/*' : type === 'audio' ? 'audio/*' : '*';
+    input.accept = type === 'image' ? 'image/*' : '*';
     
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
@@ -138,13 +184,34 @@ export default function ChatWindow({ chatUser }: { chatUser: ChatUser }) {
   return (
     <Card className="flex flex-col h-[600px]">
       <div className="p-4 border-b flex items-center gap-3">
-        <Avatar>
-          <AvatarImage src={chatUser.avatar_url} />
-          <AvatarFallback>{chatUser.nickname[0].toUpperCase()}</AvatarFallback>
-        </Avatar>
-        <div>
+        <div className="relative">
+          <Avatar>
+            <AvatarImage src={chatUser.avatar_url} />
+            <AvatarFallback>{chatUser.nickname[0].toUpperCase()}</AvatarFallback>
+          </Avatar>
+          {userStatus.is_online && (
+            <div className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 border-2 border-background rounded-full" />
+          )}
+        </div>
+        <div className="flex-1">
           <p className="font-semibold">{chatUser.nickname}</p>
-          <p className="text-sm text-muted-foreground">@{chatUser.user_id}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-muted-foreground">@{chatUser.user_id}</p>
+            {userStatus.is_online ? (
+              <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/20">
+                В сети
+              </Badge>
+            ) : userStatus.last_online ? (
+              <p className="text-xs text-muted-foreground">
+                был(-а) {new Date(userStatus.last_online).toLocaleString('ru-RU', {
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -210,14 +277,7 @@ export default function ChatWindow({ chatUser }: { chatUser: ChatUser }) {
           >
             <Icon name="Image" className="h-4 w-4" />
           </Button>
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            onClick={() => handleFileUpload('audio')}
-          >
-            <Icon name="Mic" className="h-4 w-4" />
-          </Button>
+          <VoiceRecorder onRecordComplete={handleVoiceRecord} />
           <Button
             type="button"
             size="icon"
