@@ -5,8 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import VoiceRecorder from './VoiceRecorder';
+import ForwardMessageDialog from './ForwardMessageDialog';
 import Icon from '@/components/ui/icon';
 
 interface Message {
@@ -20,6 +27,8 @@ interface Message {
   created_at: string;
   nickname: string;
   avatar_url?: string;
+  is_forwarded?: boolean;
+  forwarded_from?: number;
 }
 
 interface ChatUser {
@@ -39,6 +48,9 @@ export default function ChatWindow({ chatUser }: { chatUser: ChatUser }) {
     is_online: chatUser.is_online || false,
     last_online: chatUser.last_online,
   });
+  const [forwardDialogOpen, setForwardDialogOpen] = useState(false);
+  const [messageToForward, setMessageToForward] = useState<number | null>(null);
+  const [availableChats, setAvailableChats] = useState<any[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -61,6 +73,24 @@ export default function ChatWindow({ chatUser }: { chatUser: ChatUser }) {
         variant: 'destructive',
       });
     }
+  };
+
+  const loadAvailableChats = async () => {
+    try {
+      const response = await fetch(
+        `https://functions.poehali.dev/4db8cfd7-ba0d-41f9-bc91-0c715944684a?user_id=${user?.id}&get_chats=true`
+      );
+      const data = await response.json();
+      setAvailableChats(data.chats || []);
+    } catch (error) {
+      console.error('Failed to load chats:', error);
+    }
+  };
+
+  const handleForwardMessage = (messageId: number) => {
+    setMessageToForward(messageId);
+    loadAvailableChats();
+    setForwardDialogOpen(true);
   };
 
   useEffect(() => {
@@ -229,32 +259,59 @@ export default function ChatWindow({ chatUser }: { chatUser: ChatUser }) {
                 <AvatarFallback>{message.nickname[0]}</AvatarFallback>
               </Avatar>
             )}
-            <div
-              className={`max-w-[70%] rounded-lg p-3 ${
-                message.sender_id === user?.id
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted'
-              }`}
-            >
-              {message.image_url && (
-                <img
-                  src={message.image_url}
-                  alt="Изображение"
-                  className="rounded mb-2 max-w-full"
-                />
+            <div className="flex flex-col gap-1 max-w-[70%]">
+              {message.is_forwarded && (
+                <div className="flex items-center gap-1 text-xs opacity-70 mb-1">
+                  <Icon name="Forward" className="h-3 w-3" />
+                  <span>Переслано</span>
+                </div>
               )}
-              {message.audio_url && (
-                <audio controls className="mb-2">
-                  <source src={message.audio_url} />
-                </audio>
-              )}
-              {message.text && <p className="text-sm">{message.text}</p>}
-              <p className="text-xs opacity-70 mt-1">
-                {new Date(message.created_at).toLocaleTimeString('ru-RU', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </p>
+              <div className="relative group">
+                <div
+                  className={`rounded-lg p-3 ${
+                    message.sender_id === user?.id
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  }`}
+                >
+                  {message.image_url && (
+                    <img
+                      src={message.image_url}
+                      alt="Изображение"
+                      className="rounded mb-2 max-w-full"
+                    />
+                  )}
+                  {message.audio_url && (
+                    <audio controls className="mb-2">
+                      <source src={message.audio_url} />
+                    </audio>
+                  )}
+                  {message.text && <p className="text-sm">{message.text}</p>}
+                  <p className="text-xs opacity-70 mt-1">
+                    {new Date(message.created_at).toLocaleTimeString('ru-RU', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute -right-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6"
+                    >
+                      <Icon name="MoreVertical" className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleForwardMessage(message.id)}>
+                      <Icon name="Forward" className="mr-2 h-4 w-4" />
+                      Переслать
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
             {message.sender_id === user?.id && (
               <Avatar className="h-8 w-8">
@@ -301,6 +358,20 @@ export default function ChatWindow({ chatUser }: { chatUser: ChatUser }) {
           </Button>
         </div>
       </form>
+
+      {messageToForward && (
+        <ForwardMessageDialog
+          open={forwardDialogOpen}
+          onOpenChange={setForwardDialogOpen}
+          messageId={messageToForward}
+          chats={availableChats.map((chat) => ({
+            id: chat.user_id,
+            name: chat.nickname,
+            avatar_url: chat.avatar_url,
+            is_group: false,
+          }))}
+        />
+      )}
     </Card>
   );
 }

@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import ProfileView from '@/components/profile/ProfileView';
 import UserSearch from '@/components/search/UserSearch';
 import ChatWindow from '@/components/chat/ChatWindow';
 import ChatList from '@/components/chat/ChatList';
+import CreateGroupDialog from '@/components/groups/CreateGroupDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,8 +20,28 @@ interface ChatUser {
 
 export default function Messenger() {
   const [selectedChat, setSelectedChat] = useState<ChatUser | null>(null);
+  const [friends, setFriends] = useState<any[]>([]);
+  const [refreshChats, setRefreshChats] = useState(0);
   const { user, logout } = useAuth();
   const { unreadCount } = useNotifications();
+
+  useEffect(() => {
+    const loadFriends = async () => {
+      try {
+        const response = await fetch(
+          `https://functions.poehali.dev/bfc0feeb-bbfe-406b-b65d-1e82ca6fa8b6?user_id=${user?.id}&action=get_friends`
+        );
+        const data = await response.json();
+        setFriends(data.friends || []);
+      } catch (error) {
+        console.error('Failed to load friends:', error);
+      }
+    };
+
+    if (user) {
+      loadFriends();
+    }
+  }, [user?.id]);
 
   if (!user) return null;
 
@@ -68,8 +89,13 @@ export default function Messenger() {
                   Профиль
                 </TabsTrigger>
               </TabsList>
-              <TabsContent value="chats" className="mt-0">
+              <TabsContent value="chats" className="mt-0 space-y-3">
+                <CreateGroupDialog
+                  friends={friends}
+                  onGroupCreated={() => setRefreshChats((prev) => prev + 1)}
+                />
                 <ChatList
+                  key={refreshChats}
                   onChatSelect={setSelectedChat}
                   selectedChatId={selectedChat?.id}
                 />
